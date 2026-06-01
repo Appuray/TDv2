@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface BodyPart {
   id: string;
@@ -10,7 +11,7 @@ interface BodyPart {
   painLevel: 'Low' | 'Moderate' | 'High' | 'Extreme';
   sessions: number;
   hours: number;
-  path: string; // Background skeleton svg indicator
+  path: string;
 }
 
 const BODY_PARTS: BodyPart[] = [
@@ -52,252 +53,129 @@ const BODY_PARTS: BodyPart[] = [
   },
 ];
 
-interface Stencil {
-  id: string;
-  name: string;
-  artist: string;
-  style: string;
-  svgPath: React.ReactNode;
-}
-
-const STENCILS: Stencil[] = [
-  {
-    id: 'mandala',
-    name: 'Sacred Mandala',
-    artist: 'Elena Silva',
-    style: 'Geometric Dotwork',
-    svgPath: (
-      <g stroke="currentColor" fill="none" strokeWidth="1.2">
-        {/* Mandala center */}
-        <circle cx="100" cy="100" r="12" />
-        <circle cx="100" cy="100" r="28" strokeDasharray="3 3" />
-        <circle cx="100" cy="100" r="48" />
-        {/* Radiating geometric lines */}
-        {Array.from({ length: 12 }).map((_, i) => {
-          const angle = (i * 30 * Math.PI) / 180;
-          const x1 = (100 + Math.cos(angle) * 12).toFixed(3);
-          const y1 = (100 + Math.sin(angle) * 12).toFixed(3);
-          const x2 = (100 + Math.cos(angle) * 88).toFixed(3);
-          const y2 = (100 + Math.sin(angle) * 88).toFixed(3);
-
-          const px = (100 + Math.cos(angle) * 48).toFixed(3);
-          const py = (100 + Math.sin(angle) * 48).toFixed(3);
-
-          const p2x = (100 + Math.cos(angle + 0.15) * 64).toFixed(3);
-          const p2y = (100 + Math.sin(angle + 0.15) * 64).toFixed(3);
-          const p3x = (100 + Math.cos(angle - 0.15) * 64).toFixed(3);
-          const p3y = (100 + Math.sin(angle - 0.15) * 64).toFixed(3);
-
-          return (
-            <React.Fragment key={i}>
-              <line x1={x1} y1={y1} x2={x2} y2={y2} />
-              <polygon points={`${px},${py} ${p2x},${p2y} ${p3x},${p3y}`} />
-            </React.Fragment>
-          );
-        })}
-        <circle cx="100" cy="100" r="88" strokeWidth="0.8" />
-      </g>
-    ),
-  },
-  {
-    id: 'sacred_lines',
-    name: 'Anatomical Wave',
-    artist: 'Elena Silva',
-    style: 'Fine-Line Minimalist',
-    svgPath: (
-      <g stroke="currentColor" fill="none" strokeWidth="1.5">
-        {/* Dynamic flowing lines */}
-        <path d="M 20 180 C 40 100, 70 80, 100 100 C 130 120, 160 90, 180 20" />
-        <path d="M 30 190 C 50 110, 75 90, 100 110 C 125 130, 155 105, 170 35" strokeWidth="0.75" />
-        <path
-          d="M 10 170 C 30 90, 65 70, 100 90 C 135 110, 165 75, 190 5"
-          strokeWidth="0.5"
-          strokeDasharray="4 2"
-        />
-
-        {/* Tiny stars & geometric dots */}
-        <circle cx="100" cy="100" r="4" fill="currentColor" />
-        <circle cx="140" cy="70" r="2" fill="currentColor" />
-        <circle cx="60" cy="130" r="2" fill="currentColor" />
-        <polygon
-          points="120,50 123,55 129,56 124,60 126,66 120,63 114,66 116,60 111,56 117,55"
-          fill="currentColor"
-        />
-      </g>
-    ),
-  },
-  {
-    id: 'tiger_fury',
-    name: 'Neo-Traditional Eye',
-    artist: 'Marcus Thorne',
-    style: 'Heavy Blackwork',
-    svgPath: (
-      <g stroke="currentColor" fill="none" strokeWidth="1.6">
-        {/* Eye contour */}
-        <path d="M 20 100 Q 100 30, 180 100 Q 100 170, 20 100 Z" fill="none" />
-        <circle cx="100" cy="100" r="36" />
-        <circle cx="100" cy="100" r="18" fill="currentColor" />
-        {/* Geometric shards coming from eye */}
-        <path d="M 100 18 V 3" />
-        <path d="M 100 182 V 197" />
-        <path d="M 18 100 H 3" />
-        <path d="M 182 100 H 197" />
-        <path d="M 100 64 L 60 10" />
-        <path d="M 100 64 L 140 10" />
-        <path d="M 100 136 L 60 190" />
-        <path d="M 100 136 L 140 190" />
-      </g>
-    ),
-  },
-];
-
 const SKIN_TONES = [
-  { name: 'Pale Sand', hex: '#F3D2C1', text: 'text-gray-900' },
-  { name: 'Warm Honey', hex: '#DFB18A', text: 'text-gray-900' },
-  { name: 'Rich Bronze', hex: '#A77D5E', text: 'text-white' },
-  { name: 'Dark Cocoa', hex: '#583624', text: 'text-white' },
+  { name: 'Pale Sand', hex: '#F3D2C1' },
+  { name: 'Warm Honey', hex: '#DFB18A' },
+  { name: 'Rich Bronze', hex: '#A77D5E' },
+  { name: 'Dark Cocoa', hex: '#583624' },
 ];
+
+const BRUSH_COLORS = [
+  { id: 'solid', hex: '#111115', name: 'Solid Black' },
+  { id: 'stencil', hex: '#2b3da6', name: 'Stencil Blue' },
+  { id: 'blood', hex: '#8a1c1c', name: 'Sketch Red' },
+  { id: 'white', hex: '#ffffff', name: 'White Highlight' },
+];
+
+const CANVAS_SIZE = 1000;
 
 export default function TattooVisualizer() {
   const [selectedPart, setSelectedPart] = useState<BodyPart>(BODY_PARTS[0]);
   const [selectedSkin, setSelectedSkin] = useState(SKIN_TONES[1]);
-  const [selectedStencil, setSelectedStencil] = useState<Stencil>(STENCILS[0]);
+  
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [brushColor, setBrushColor] = useState(BRUSH_COLORS[0].hex);
+  const [brushSize, setBrushSize] = useState(8);
+  const isDrawing = useRef(false);
+  const lastPos = useRef({ x: 0, y: 0 });
 
-  // Custom Adjustments
-  const [scale, setScale] = useState(80); // percentage
-  const [rotation, setRotation] = useState(0); // degrees
-  const [opacity, setOpacity] = useState(85); // percentage
-  const [xOffset, setXOffset] = useState(0); // px
-  const [yOffset, setYOffset] = useState(0); // px
-  const [stencilStyle, setStencilStyle] = useState<'solid' | 'stencil' | 'dotwork'>('stencil');
-
-  // Mouse drag states for canvas placement
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef({ x: 0, y: 0 });
-  const offsetStart = useRef({ x: 0, y: 0 });
-
-  const handleStart = (clientX: number, clientY: number) => {
-    setIsDragging(true);
-    dragStart.current = { x: clientX, y: clientY };
-    offsetStart.current = { x: xOffset, y: yOffset };
-  };
-
-  const handleMove = (clientX: number, clientY: number) => {
-    if (!isDragging) return;
-    const dx = clientX - dragStart.current.x;
-    const dy = clientY - dragStart.current.y;
-    setXOffset(offsetStart.current.x + dx);
-    setYOffset(offsetStart.current.y + dy);
-  };
-
-  const handleEnd = () => {
-    setIsDragging(false);
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => handleStart(e.clientX, e.clientY);
-  const handleMouseMove = (e: React.MouseEvent) => handleMove(e.clientX, e.clientY);
-  const handleMouseUp = handleEnd;
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length > 0) {
-      handleStart(e.touches[0].clientX, e.touches[0].clientY);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (ctx) {
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
     }
-  };
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length > 0) {
-      handleMove(e.touches[0].clientX, e.touches[0].clientY);
-    }
+  }, []);
+
+  const getCoordinates = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = CANVAS_SIZE / rect.width;
+    const scaleY = CANVAS_SIZE / rect.height;
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
   };
 
-  // Stencil styling variables
-  const getStencilColorClass = () => {
-    switch (stencilStyle) {
-      case 'solid':
-        return 'text-[#111115]'; // Solid carbon black
-      case 'stencil':
-        return 'text-[#2b3da6]'; // Real stencil purple/blue
-      case 'dotwork':
-        return 'text-[#383842] opacity-80'; // Charcoal shade
-      default:
-        return 'text-accent';
+  const startDrawing = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    isDrawing.current = true;
+    lastPos.current = getCoordinates(e);
+  };
+
+  const draw = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawing.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!ctx || !canvas) return;
+
+    const newPos = getCoordinates(e);
+
+    ctx.beginPath();
+    ctx.moveTo(lastPos.current.x, lastPos.current.y);
+    ctx.lineTo(newPos.x, newPos.y);
+    ctx.strokeStyle = brushColor;
+    ctx.lineWidth = brushSize;
+    ctx.stroke();
+
+    lastPos.current = newPos;
+  };
+
+  const stopDrawing = () => {
+    isDrawing.current = false;
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (ctx && canvas) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
   };
 
   return (
-    <section className="py-24 bg-[#111115] border-y border-border relative overflow-hidden">
-      {/* Background cinematic visuals */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[200px] pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[200px] pointer-events-none" />
+    <section className="pt-20 pb-4 lg:pt-24 lg:pb-6 bg-[#0a0a0c] border-y border-white/[0.03] relative h-screen lg:h-[100dvh] flex flex-col overflow-hidden">
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-white/[0.02] rounded-full blur-[120px] pointer-events-none" />
 
-      <div className="max-w-7xl mx-auto px-6 relative z-10">
-        <div className="text-center mb-16">
-          <span className="inline-flex items-center gap-2 px-4 py-1.5 border border-accent/20 rounded-full text-[10px] uppercase tracking-[0.25em] font-medium text-accent bg-accent/5 mb-4">
-            Try Before You Ink
+      <div className="max-w-7xl mx-auto px-4 md:px-6 relative z-10 flex-1 flex flex-col w-full h-full min-h-0">
+        <div className="text-center mb-4 shrink-0">
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-medium text-foreground-muted bg-white/[0.03] border border-white/[0.05] mb-2">
+            Interactive Canvas
           </span>
-          <h2 className="font-editorial text-4xl md:text-6xl text-foreground mb-6">
-            Design Your <em className="text-shimmer">Dream Tattoo.</em>
+          <h2 className="text-3xl md:text-4xl lg:text-5xl tracking-tight text-foreground font-editorial">
+            Sketch your custom design.
           </h2>
-          <p className="text-foreground-muted font-light max-w-xl mx-auto text-sm md:text-base leading-relaxed">
-            Select a design, pick your skin tone, and see exactly how it will look on your body.
-            Drag, resize, and place it perfectly before booking your session.
-          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-stretch">
-          {/* ── LEFT: Visual Canvas Display (7 cols) ── */}
-          <div className="lg:col-span-7 flex flex-col justify-between bg-[#0a0a0c] border border-white/5 p-4 md:p-6 lg:p-8 rounded-2xl relative shadow-2xl overflow-hidden min-h-[400px] md:min-h-[500px] lg:min-h-[600px]">
-            {/* Top row controls */}
-            <div className="flex flex-wrap items-center justify-between gap-4 z-20 mb-6">
-              <div>
-                <span className="text-[10px] uppercase tracking-widest text-foreground-muted font-bold block mb-1">
-                  Body Part
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 flex-1 min-h-0">
+          {/* ── LEFT: Visual Canvas Display (8 cols) ── */}
+          <div className="lg:col-span-8 flex flex-col justify-between bg-white/[0.02] border border-white/[0.06] p-4 lg:p-6 rounded-[2rem] relative overflow-hidden h-[50vh] lg:h-full lg:min-h-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+            
+            {/* Top row indicators */}
+            <div className="flex flex-wrap items-center justify-between gap-4 z-20 mb-6 pointer-events-none">
+              <div className="bg-black/20 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/[0.05]">
+                <span className="text-[10px] text-foreground-muted font-medium block uppercase tracking-wider mb-0.5">
+                  Placement
                 </span>
-                <span className="font-editorial text-xl text-accent font-semibold">
+                <span className="text-sm text-foreground font-medium font-editorial">
                   {selectedPart.name}
                 </span>
-              </div>
-
-              {/* Skin Tone Selector */}
-              <div className="flex items-center gap-3 bg-surface/50 border border-white/10 px-4 py-2 rounded-lg backdrop-blur-md">
-                <span className="text-[9px] uppercase tracking-wider text-foreground-muted font-bold">
-                  Skin:
-                </span>
-                <div className="flex gap-2">
-                  {SKIN_TONES.map((tone) => (
-                    <button
-                      key={tone.name}
-                      onClick={() => setSelectedSkin(tone)}
-                      className={`w-6 h-6 rounded-full border transition-all duration-300 ${
-                        selectedSkin.name === tone.name
-                          ? 'border-accent scale-110 shadow-[0_0_10px_#C4A882]'
-                          : 'border-transparent hover:scale-105'
-                      }`}
-                      style={{ backgroundColor: tone.hex }}
-                      title={tone.name}
-                      aria-label={`Select skin tone ${tone.name}`}
-                    />
-                  ))}
-                </div>
               </div>
             </div>
 
             {/* Middle Simulator Canvas Area */}
             <div
-              className="flex-grow flex items-center justify-center relative overflow-hidden rounded-xl border border-white/5 transition-all duration-500 shadow-inner group"
+              className="flex-grow flex items-center justify-center relative overflow-hidden rounded-2xl transition-colors duration-500 shadow-inner group"
               style={{ backgroundColor: selectedSkin.hex }}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleEnd}
-              onTouchCancel={handleEnd}
             >
-              {/* Grid guide */}
-              <div className="absolute inset-0 bg-[radial-gradient(rgba(0,0,0,0.15)_1.5px,transparent_1.5px)] [background-size:16px_16px] pointer-events-none opacity-40" />
+              <div className="absolute inset-0 shadow-[inset_0_0_100px_rgba(0,0,0,0.15)] pointer-events-none" />
+              <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.1)_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
 
-              {/* Body anatomy path rendering */}
+              {/* Body anatomy path */}
               <svg
-                className="absolute inset-0 w-full h-full text-black/10 select-none pointer-events-none"
+                className="absolute inset-0 w-full h-full text-black/[0.07] select-none pointer-events-none"
                 viewBox="0 0 100 320"
                 preserveAspectRatio="none"
               >
@@ -306,86 +184,56 @@ export default function TattooVisualizer() {
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="0.8"
-                  strokeDasharray="4 4"
-                  className="transition-all duration-700"
+                  strokeDasharray="4 6"
+                  className="transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)]"
                 />
               </svg>
 
-              {/* Draggable Stencil Element */}
-              <div
-                onMouseDown={handleMouseDown}
-                onTouchStart={handleTouchStart}
-                className={`absolute cursor-grab active:cursor-grabbing select-none transition-transform duration-75 origin-center ${getStencilColorClass()}`}
-                style={{
-                  transform: `translate(${xOffset}px, ${yOffset}px) rotate(${rotation}deg) scale(${scale / 100})`,
-                  opacity: opacity / 100,
-                }}
-              >
-                <svg
-                  width="200"
-                  height="200"
-                  viewBox="0 0 200 200"
-                  className="drop-shadow-[0_2px_12px_rgba(0,0,0,0.2)]"
-                >
-                  {selectedStencil.svgPath}
-                </svg>
-              </div>
+              {/* Freehand Draw Layer */}
+              <canvas
+                ref={canvasRef}
+                width={CANVAS_SIZE}
+                height={CANVAS_SIZE}
+                className="absolute inset-0 w-full h-full touch-none cursor-crosshair z-10"
+                onPointerDown={startDrawing}
+                onPointerMove={draw}
+                onPointerUp={stopDrawing}
+                onPointerLeave={stopDrawing}
+              />
 
-              {/* Position helper HUD in bottom corner */}
-              <div className="absolute bottom-4 left-4 bg-black/75 backdrop-blur-md px-3 py-1.5 rounded border border-white/10 text-[9px] font-mono text-foreground-muted select-none pointer-events-none">
-                POS: {xOffset}px, {yOffset}px | ROT: {rotation}°
+              <div className="absolute bottom-4 right-4 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-lg text-[10px] text-white/80 pointer-events-none select-none font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                Draw anywhere
               </div>
-
-              {/* Instruction banner overlay */}
-              <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded text-[9px] uppercase tracking-wider text-accent pointer-events-none select-none font-medium">
-                Drag stencil to place
-              </div>
-            </div>
-
-            {/* Quick reset button */}
-            <div className="mt-4 flex items-center justify-between text-xs text-foreground-muted border-t border-white/5 pt-4 z-20">
-              <span>Tattoo Placement Previewer</span>
-              <button
-                onClick={() => {
-                  setXOffset(0);
-                  setYOffset(0);
-                  setScale(80);
-                  setRotation(0);
-                  setOpacity(85);
-                }}
-                className="text-accent hover:text-foreground font-semibold uppercase tracking-wider"
-              >
-                Reset Layout
-              </button>
             </div>
           </div>
 
-          {/* ── RIGHT: Controls Panel (5 cols) ── */}
-          <div className="lg:col-span-5 flex flex-col justify-between bg-surface border border-white/5 p-4 md:p-6 lg:p-8 rounded-2xl shadow-2xl">
-            <div className="space-y-8">
-              {/* Segment 1: Placement & Stencil Choice */}
-              <div>
-                <h3 className="text-xs uppercase tracking-widest text-accent font-bold mb-4">
-                  01 / Choose Design
+          {/* ── RIGHT: Controls Panel (4 cols) ── */}
+          <div className="lg:col-span-4 flex flex-col h-full min-h-0 relative">
+            
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar min-h-0">
+              <motion.div 
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-4 pb-4"
+              >
+                {/* Segment 1: Placement & Skin Tone */}
+                <div className="bg-white/[0.02] border border-white/[0.06] p-4 lg:p-5 rounded-[1.5rem] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                <h3 className="text-base font-medium text-foreground mb-4 font-editorial">
+                  1. Setup Canvas
                 </h3>
 
-                {/* Body Part Grid selector */}
-                <label className="block text-[10px] uppercase tracking-widest text-foreground-muted mb-2 font-semibold">
-                  Where do you want the tattoo?
+                <label className="block text-[11px] text-foreground-muted mb-2 font-medium">
+                  Select placement
                 </label>
                 <div className="grid grid-cols-2 gap-2 mb-6">
                   {BODY_PARTS.map((part) => (
                     <button
                       key={part.id}
-                      onClick={() => {
-                        setSelectedPart(part);
-                        setXOffset(0);
-                        setYOffset(0);
-                      }}
-                      className={`px-3 py-2.5 text-[9px] uppercase tracking-wider font-bold text-center border transition-all duration-300 ${
+                      onClick={() => setSelectedPart(part)}
+                      className={`px-3 py-2.5 text-[11px] font-medium text-left rounded-xl transition-all duration-200 active:scale-[0.98] ${
                         selectedPart.id === part.id
-                          ? 'border-accent bg-accent/5 text-accent'
-                          : 'border-white/10 text-foreground-muted hover:border-white/20 hover:text-foreground'
+                          ? 'bg-white/10 text-foreground shadow-sm ring-1 ring-white/10'
+                          : 'bg-transparent text-foreground-muted hover:bg-white/[0.03]'
                       }`}
                     >
                       {part.name}
@@ -393,202 +241,99 @@ export default function TattooVisualizer() {
                   ))}
                 </div>
 
-                {/* Stencil Choice Selector */}
-                <label className="block text-[10px] uppercase tracking-widest text-foreground-muted mb-2 font-semibold">
-                  Pick a Design
+                <label className="block text-[11px] text-foreground-muted mb-2 font-medium">
+                  Select skin tone
                 </label>
-                <div className="space-y-2">
-                  {STENCILS.map((stencil) => (
+                <div className="flex gap-2">
+                  {SKIN_TONES.map((tone) => (
                     <button
-                      key={stencil.id}
-                      onClick={() => setSelectedStencil(stencil)}
-                      className={`w-full text-left px-4 py-3 border transition-all duration-300 flex items-center justify-between ${
-                        selectedStencil.id === stencil.id
-                          ? 'border-accent bg-accent/5'
-                          : 'border-white/10 hover:border-white/20'
-                      }`}
+                      key={tone.name}
+                      onClick={() => setSelectedSkin(tone)}
+                      className="relative w-8 h-8 rounded-full transition-transform duration-200 hover:scale-110 focus:outline-none"
+                      style={{ backgroundColor: tone.hex }}
+                      aria-label={`Select skin tone ${tone.name}`}
                     >
-                      <div>
-                        <h4 className="font-editorial text-sm text-foreground">{stencil.name}</h4>
-                        <p className="text-[9px] text-foreground-muted uppercase tracking-wider font-semibold">
-                          By {stencil.artist} • {stencil.style}
-                        </p>
-                      </div>
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        className={
-                          selectedStencil.id === stencil.id ? 'text-accent' : 'text-foreground/30'
-                        }
-                      >
-                        <path d="M20 6L9 17l-5-5" />
-                      </svg>
+                      {selectedSkin.name === tone.name && (
+                        <motion.div
+                          layoutId="skin-indicator"
+                          className="absolute -inset-[3px] rounded-full border border-white/30"
+                          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                        />
+                      )}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Segment 2: Stencil Render Styling (Black, Blue, Charcoal) */}
-              <div>
-                <label className="block text-[10px] uppercase tracking-widest text-foreground-muted mb-3 font-semibold">
-                  Ink Style
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(
-                    [
-                      { id: 'solid', name: 'Solid Black' },
-                      { id: 'stencil', name: 'Stencil Blue' },
-                      { id: 'dotwork', name: 'Soft Dotwork' },
-                    ] as const
-                  ).map((style) => (
-                    <button
-                      key={style.id}
-                      onClick={() => setStencilStyle(style.id)}
-                      className={`px-3 py-2 text-[9px] uppercase tracking-wider font-bold text-center border transition-all duration-300 ${
-                        stencilStyle === style.id
-                          ? 'border-accent bg-accent/5 text-accent'
-                          : 'border-white/5 text-foreground-muted hover:border-white/15'
-                      }`}
-                    >
-                      {style.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Segment 3: Sliders (Scale, Rotate, Opacity) */}
-              <div>
-                <h3 className="text-xs uppercase tracking-widest text-accent font-bold mb-4">
-                  02 / Adjust Your Tattoo
+              {/* Segment 2: Drawing Tools */}
+              <div className="bg-white/[0.02] border border-white/[0.06] p-4 lg:p-5 rounded-[1.5rem] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                <h3 className="text-base font-medium text-foreground mb-4 font-editorial">
+                  2. Tools
                 </h3>
 
-                <div className="space-y-4">
-                  {/* Scale */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-[10px] uppercase tracking-wider">
-                      <span className="text-foreground-muted">Size</span>
-                      <span className="text-foreground font-semibold">{scale}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="30"
-                      max="150"
-                      value={scale}
-                      onChange={(e) => setScale(Number(e.target.value))}
-                      className="w-full accent-accent bg-white/10 h-1 rounded"
-                    />
-                  </div>
-
-                  {/* Rotation */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-[10px] uppercase tracking-wider">
-                      <span className="text-foreground-muted">Rotate</span>
-                      <span className="text-foreground font-semibold">{rotation}°</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="-180"
-                      max="180"
-                      value={rotation}
-                      onChange={(e) => setRotation(Number(e.target.value))}
-                      className="w-full accent-accent bg-white/10 h-1 rounded"
-                    />
-                  </div>
-
-                  {/* Opacity */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-[10px] uppercase tracking-wider">
-                      <span className="text-foreground-muted">Fade (Opacity)</span>
-                      <span className="text-foreground font-semibold">{opacity}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="20"
-                      max="100"
-                      value={opacity}
-                      onChange={(e) => setOpacity(Number(e.target.value))}
-                      className="w-full accent-accent bg-white/10 h-1 rounded"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Segment 4: Anatomical Consult & Pain Meter */}
-              <div className="bg-[#0a0a0c] border border-white/5 p-4 rounded-xl space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase tracking-widest text-foreground-muted font-bold">
-                    Pain Level
-                  </span>
-                  <span
-                    className={`text-[9px] uppercase tracking-widest px-2.5 py-0.5 rounded-full font-bold ${
-                      selectedPart.pain >= 8
-                        ? 'bg-red-950 text-red-400 border border-red-800/40'
-                        : selectedPart.pain >= 5
-                          ? 'bg-amber-950 text-amber-400 border border-amber-800/40'
-                          : 'bg-emerald-950 text-emerald-400 border border-emerald-800/40'
-                    }`}
-                  >
-                    {selectedPart.painLevel} Pain
-                  </span>
-                </div>
-
-                {/* Pain Bar Gauge */}
-                <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden relative">
-                  <div
-                    className={`h-full rounded-full transition-all duration-700 ${
-                      selectedPart.pain >= 8
-                        ? 'bg-red-500 shadow-[0_0_10px_#ef4444]'
-                        : selectedPart.pain >= 5
-                          ? 'bg-amber-500 shadow-[0_0_10px_#f59e0b]'
-                          : 'bg-emerald-500 shadow-[0_0_10px_#10b981]'
-                    }`}
-                    style={{ width: `${(selectedPart.pain / 10) * 100}%` }}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-xs pt-2">
+                <div className="space-y-6">
                   <div>
-                    <span className="block text-[8px] uppercase tracking-widest text-foreground-muted mb-0.5">
-                      Sessions Needed
-                    </span>
-                    <span className="text-foreground font-bold">
-                      {selectedPart.sessions} Session(s)
-                    </span>
+                    <label className="block text-[11px] text-foreground-muted mb-3 font-medium">
+                      Brush Color
+                    </label>
+                    <div className="flex gap-3">
+                      {BRUSH_COLORS.map((color) => (
+                        <button
+                          key={color.id}
+                          onClick={() => setBrushColor(color.hex)}
+                          className="relative w-8 h-8 rounded-full transition-transform duration-200 hover:scale-110 focus:outline-none ring-1 ring-white/10 shadow-sm"
+                          style={{ backgroundColor: color.hex }}
+                          aria-label={`Select brush color ${color.name}`}
+                        >
+                          {brushColor === color.hex && (
+                            <motion.div
+                              layoutId="brush-indicator"
+                              className="absolute -inset-[3px] rounded-full border border-white/30"
+                              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                            />
+                          )}
+                        </button>
+                      ))}
+                    </div>
                   </div>
+
                   <div>
-                    <span className="block text-[8px] uppercase tracking-widest text-foreground-muted mb-0.5">
-                      Time Required
-                    </span>
-                    <span className="text-foreground font-bold">~{selectedPart.hours} Hours</span>
+                    <div className="flex justify-between text-[11px] font-medium mb-3">
+                      <span className="text-foreground-muted">Brush Size</span>
+                      <span className="text-foreground">{brushSize}px</span>
+                    </div>
+                    <input
+                      type="range" min="1" max="40" value={brushSize}
+                      onChange={(e) => setBrushSize(Number(e.target.value))}
+                      className="w-full custom-range-slider"
+                      aria-label="Adjust brush size"
+                    />
                   </div>
                 </div>
+
+                <button
+                  onClick={clearCanvas}
+                  className="w-full mt-6 px-4 py-3 bg-transparent border border-white/10 text-foreground text-xs font-medium rounded-xl hover:bg-white/[0.03] transition-all active:scale-[0.98]"
+                >
+                  Clear Canvas
+                </button>
               </div>
+            </motion.div>
             </div>
 
-            {/* Immersive Consultation Booking CTA */}
-            <div className="mt-8 pt-6 border-t border-white/5">
+            {/* Consultation Booking CTA - Always Visible at bottom */}
+            <div className="mt-2 pt-4 border-t border-white/[0.05] shrink-0">
               <Link
-                href={`/book-session?artist=${encodeURIComponent(selectedStencil.artist)}&placement=${encodeURIComponent(selectedPart.name)}&sessions=${selectedPart.sessions}`}
-                className="w-full bg-accent text-[#0a0a0c] py-4 text-xs uppercase tracking-[0.25em] font-bold hover:bg-accent/90 transition-colors flex items-center justify-center gap-2 shadow-lg"
+                href={`/book-session?mode=draw&placement=${encodeURIComponent(selectedPart.name)}`}
+                className="w-full bg-white text-black py-3.5 rounded-xl text-sm font-semibold hover:bg-white/90 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               >
-                <span>Book This Tattoo</span>
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                >
+                <span>Book this concept</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
               </Link>
-              <p className="text-center text-[9px] text-foreground-muted uppercase tracking-wider font-medium mt-3">
-                Book a session with {selectedStencil.artist} for your {selectedPart.name}
+              <p className="text-center text-[10px] text-foreground-muted mt-3 font-medium">
+                Reserves a consultation for {selectedPart.name}
               </p>
             </div>
           </div>

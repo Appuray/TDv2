@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import AppLogo from '@/components/ui/AppLogo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -15,11 +15,31 @@ const NAV_ITEMS = [
 
 export default function Header() {
   const [scrolled, setScrolled] = useState(false);
+  const [hidden, setHidden] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
 
+  const lastScrollY = useRef(0);
+  const isMenuOpenRef = useRef(isMenuOpen);
+
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
+    isMenuOpenRef.current = isMenuOpen;
+  }, [isMenuOpen]);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const currentScrollY = window.scrollY;
+      setScrolled(currentScrollY > 40);
+
+      // Auto-hide behavior
+      if (currentScrollY > lastScrollY.current && currentScrollY > 100 && !isMenuOpenRef.current) {
+        setHidden(true);
+      } else if (currentScrollY < lastScrollY.current) {
+        setHidden(false);
+      }
+
+      lastScrollY.current = currentScrollY;
+    };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
@@ -36,17 +56,15 @@ export default function Header() {
   return (
     <>
       <header
-        className={`fixed left-0 right-0 z-[60] px-4 md:px-8 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-          scrolled ? 'top-4 translate-y-0' : 'top-0 translate-y-0'
+        className={`fixed top-0 left-0 right-0 z-[60] transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          hidden ? '-translate-y-[150%] opacity-0' : 'translate-y-0 opacity-100'
+        } ${
+          scrolled || isMenuOpen
+            ? 'bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-white/[0.05] shadow-[0_10px_30px_rgba(0,0,0,0.5)] py-3 md:py-4'
+            : 'bg-gradient-to-b from-black/50 to-transparent py-5 md:py-6'
         }`}
       >
-        <div
-          className={`max-w-7xl mx-auto flex items-center justify-between rounded-full transition-all duration-700 ${
-            scrolled || isMenuOpen
-              ? 'bg-[#0a0a0c]/90 backdrop-blur-xl border border-white/10 shadow-[0_20px_40px_rgba(0,0,0,0.5)] px-6 py-3 md:px-8 md:py-4 mt-0'
-              : 'bg-transparent border-transparent px-2 py-4 md:px-4 md:py-5 mt-0'
-          }`}
-        >
+        <div className="max-w-7xl mx-auto px-6 md:px-8 flex items-center justify-between w-full">
           {/* Logo */}
           <Link href="/" aria-label="Glowly Ink Home" className="flex items-center gap-2 group relative z-[70]">
             <AppLogo
